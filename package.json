@@ -1,0 +1,15 @@
+{
+  "name": "test",
+  "version": "0.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "build": "sin build",
+    "generate": "sin generate",
+    "start": "sin start",
+    "dev": "sin dev"
+  },
+  "dependencies": {
+    "sin": "github:porsager/sin"
+  }
+}
