@@ -1,23 +1,42 @@
 import s from "sin";
+
+function noop() {}
+
 const m = (tag, ...children) => {
   let attrs = {};
   if (typeof children[0] === "object") {
     [attrs, ...children] = children;
   }
+  // convert closure component to pojo component
+  if (typeof tag === "function") {
+    const oninit = tag;
+    tag = {
+      oninit: (vnode) => Object.assign(tag, oninit(vnode)),
+      view: noop,
+    };
+  }
+
   if (tag.view) {
     return s(() => {
       const vnode = { state: {}, attrs, children };
       tag.oninit?.(vnode);
-      return () => tag.view(vnode);
+      let onupdate = () => {
+        (attrs.oncreate || noop)(vnode);
+        (tag.oncreate || noop)(vnode);
+        onupdate = () => {
+          (attrs.onupdate || noop)(vnode);
+          (tag.onupdate || noop)(vnode);
+        };
+      };
+      return () => {
+        const res = tag.view(vnode);
+        vnode.dom = res;
+        onupdate();
+        return res;
+      };
     });
   }
-  if (typeof tag === "function") {
-    return s(() => {
-      const vnode = { attrs, children };
-      const view = tag(vnode).view;
-      return () => view(vnode);
-    });
-  }
+
   if (attrs.oncreate || attrs.onupdate) {
     return s(() => {
       const vnode = { attrs, children };
@@ -36,6 +55,7 @@ const m = (tag, ...children) => {
         );
     });
   }
+
   return s(tag, attrs, ...children);
 };
 
@@ -66,8 +86,16 @@ const pojo = {
 m.mount(document.body, {
   view: () => [
     m(`h1`, "Welcome to mithril-sin"),
-    m(closure, { initial: 10 }),
-    m(pojo, { initial: 20 }),
+    m(closure, {
+      initial: 10,
+      oncreate: (vn) => console.log("closure oncreate", vn),
+      onupdate: (vn) => console.log("closure onupdate", vn),
+    }),
+    m(pojo, {
+      initial: 20,
+      oncreate: (vn) => console.log("pojo oncreate", vn),
+      onupdate: (vn) => console.log("pojo onupdate", vn),
+    }),
     m("p", { style: { color: "red" } }, "with Style"),
     m(
       "p",
