@@ -37,11 +37,14 @@ const m = (tag, ...children) => {
     });
   }
 
-  if (attrs.oncreate || attrs.onupdate) {
-    return s(() => {
+  if (attrs.oncreate || attrs.onupdate || attrs.onbeforeupdate) {
+    return s(({}, [], { ignore }) => {
       const vnode = { attrs, children };
-      return () =>
-        s(
+      return (attrs, children) => {
+        vnode.children = children;
+        vnode.attrs = attrs;
+        attrs.onbeforeupdate && ignore(!attrs.onbeforeupdate(vnode));
+        return s(
           tag,
           {
             ...attrs,
@@ -51,9 +54,10 @@ const m = (tag, ...children) => {
             },
           },
           vnode.dom && (() => (attrs.onupdate?.(vnode), null)),
-          ...vnode.children
+          vnode.children
         );
-    });
+      };
+    })(attrs, children);
   }
 
   return s(tag, attrs, ...children);
@@ -107,8 +111,21 @@ m.mount(document.body, {
           console.log("onupdate", vnode.dom);
         },
       },
-      "with Hook"
+      "with oncreate/onupdate hook",
+      new Date()
     ),
+    m(
+      "p",
+      {
+        onbeforeupdate: (vnode) => {
+          console.log("onbeforeupdate", vnode.dom);
+          return false;
+        },
+      },
+      "with onbeforeupdate hook (should not update)",
+      new Date()
+    ),
+    m("p", "no hook", new Date()),
     (console.log("redraw"), null),
   ],
 });
