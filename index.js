@@ -1,7 +1,5 @@
 import s from "sin";
 
-let showOnBeforeRemove = true;
-
 const m = (tag, ...children) => {
   let attrs = {};
   if (typeof children[0] === "object") {
@@ -102,6 +100,8 @@ const pojo = {
   ],
 };
 
+let showOnBeforeRemove = true;
+
 const home = {
   view: () => [
     m(`h1`, "Welcome to mithril-sin"),
@@ -182,33 +182,3 @@ m.route(document.body, "/", {
     ],
   },
 });
-
-const things = [
-  s(() => {
-    let el;
-    return () => {
-      el && console.log("update", el.offsetWidth);
-      return s(
-        ".thing",
-        {
-          dom: (_el) => {
-            el = _el;
-            console.log("create", el.offsetWidth);
-          },
-        },
-        "thing"
-      );
-    };
-  }),
-  s(() => {
-    const node = s(
-      ".thing",
-      { dom: () => console.log("create", node) },
-      "thing"
-    );
-    return () => {
-      console.log("update", node);
-      return node;
-    };
-  }),
-];
