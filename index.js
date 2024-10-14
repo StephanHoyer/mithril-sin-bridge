@@ -2,6 +2,8 @@ import s from "sin";
 
 function noop() {}
 
+let showOnBeforeRemove = true;
+
 const m = (tag, ...children) => {
   let attrs = {};
   if (typeof children[0] === "object") {
@@ -37,7 +39,12 @@ const m = (tag, ...children) => {
     });
   }
 
-  if (attrs.oncreate || attrs.onupdate || attrs.onbeforeupdate) {
+  if (
+    attrs.oncreate ||
+    attrs.onupdate ||
+    attrs.onbeforeupdate ||
+    attrs.onbeforeremove
+  ) {
     return s(({}, [], { ignore }) => {
       const vnode = { attrs, children };
       return (attrs, children) => {
@@ -51,6 +58,7 @@ const m = (tag, ...children) => {
             dom: (dom) => {
               vnode.dom = dom;
               attrs.oncreate?.(vnode);
+              return () => attrs.onbeforeremove?.(vnode);
             },
           },
           vnode.dom && (() => (attrs.onupdate?.(vnode), null)),
@@ -126,6 +134,18 @@ m.mount(document.body, {
       new Date()
     ),
     m("p", "no hook", new Date()),
+    showOnBeforeRemove &&
+      m(
+        "p",
+        {
+          onbeforeremove: (vnode) => {
+            console.log("onbeforeupdate", vnode.dom);
+            return new Promise((res) => setTimeout(res, 1000));
+          },
+        },
+        "with onbeforeremove",
+        m("button", { onclick: () => (showOnBeforeRemove = false) }, "remove")
+      ),
     (console.log("redraw"), null),
   ],
 });
