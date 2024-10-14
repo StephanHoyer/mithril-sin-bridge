@@ -1,7 +1,5 @@
 import s from "sin";
 
-function noop() {}
-
 let showOnBeforeRemove = true;
 
 const m = (tag, ...children) => {
@@ -14,7 +12,7 @@ const m = (tag, ...children) => {
     const oninit = tag;
     tag = {
       oninit: (vnode) => Object.assign(tag, oninit(vnode)),
-      view: noop,
+      view: () => {},
     };
   }
 
@@ -23,11 +21,11 @@ const m = (tag, ...children) => {
       const vnode = { state: {}, attrs, children };
       tag.oninit?.(vnode);
       let onupdate = () => {
-        (attrs.oncreate || noop)(vnode);
-        (tag.oncreate || noop)(vnode);
+        attrs.oncreate?.(vnode);
+        tag.oncreate?.(vnode);
         onupdate = () => {
-          (attrs.onupdate || noop)(vnode);
-          (tag.onupdate || noop)(vnode);
+          attrs.onupdate?.(vnode);
+          tag.onupdate?.(vnode);
         };
       };
       return () => {
@@ -71,7 +69,16 @@ const m = (tag, ...children) => {
   return s(tag, attrs, ...children);
 };
 
+m.route = (dom, defaultRoute, routes) => {
+  const sRoutes = { "*": () => s.route(defaultRoute) };
+  for (const path in routes) {
+    sRoutes[path] = (params) => m(routes[path], params);
+  }
+  s.mount(dom, ({}, [], { route }) => route(sRoutes));
+};
 m.mount = (dom, comp) => s.mount(dom, () => m(comp));
+
+/// test
 
 const closure = (vnode) => {
   let count = vnode.attrs.initial;
@@ -95,9 +102,10 @@ const pojo = {
   ],
 };
 
-m.mount(document.body, {
+const home = {
   view: () => [
     m(`h1`, "Welcome to mithril-sin"),
+    m("a", { href: "/about" }, "About"),
     m(closure, {
       initial: 10,
       oncreate: (vn) => console.log("closure oncreate", vn),
@@ -134,20 +142,45 @@ m.mount(document.body, {
       new Date()
     ),
     m("p", "no hook", new Date()),
-    showOnBeforeRemove &&
-      m(
-        "p",
-        {
-          onbeforeremove: (vnode) => {
-            console.log("onbeforeupdate", vnode.dom);
-            return new Promise((res) => setTimeout(res, 1000));
+    showOnBeforeRemove
+      ? m(
+          "p",
+          {
+            onbeforeremove: (vnode) => {
+              console.log("onbeforeupdate", vnode.dom);
+              return new Promise((res) => setTimeout(res, 1000));
+            },
           },
-        },
-        "with onbeforeremove",
-        m("button", { onclick: () => (showOnBeforeRemove = false) }, "remove")
-      ),
+          "with onbeforeremove",
+          m(
+            "button",
+            { onclick: () => (showOnBeforeRemove = false) },
+            "remove after 1s"
+          )
+        )
+      : m("button", { onclick: () => (showOnBeforeRemove = true) }, "restore"),
     (console.log("redraw"), null),
   ],
+};
+
+m.route(document.body, "/", {
+  "/": home,
+  "/about": {
+    view: () => [
+      m("h1", "About"),
+      m("a", { href: "/" }, "Home"),
+      m("a", { href: "/thing/1" }, "Thing 1"),
+      m("a", { href: "/thing/2" }, "Thing 2"),
+    ],
+  },
+  "/thing/:id": {
+    view: ({ attrs }) => [
+      m("h1", `Thing ${attrs.id}`),
+      m("a", { href: "/thing/1" }, "Thing 1"),
+      m("a", { href: "/thing/2" }, "Thing 2"),
+      m("a", { href: "/xxx" }, "xxx"),
+    ],
+  },
 });
 
 const things = [
