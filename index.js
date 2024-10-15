@@ -68,13 +68,19 @@ const m = (tag, ...children) => {
 };
 
 m.route = (dom, defaultRoute, routes) => {
+  if (dom)
+    console.warn("mounting to other than document.body is not supported atm");
   const sRoutes = { "*": () => s.route(defaultRoute) };
   for (const path in routes) {
     sRoutes[path] = (params) => m(routes[path], params);
   }
-  s.mount(dom, ({}, [], { route }) => route(sRoutes));
+  return s.mount(({}, [], { route }) => route(sRoutes));
 };
-m.mount = (dom, comp) => s.mount(dom, () => m(comp));
+m.mount = (dom, comp) => {
+  if (dom)
+    console.warn("mounting to other than document.body is not supported atm");
+  s.mount(() => m(comp));
+};
 
 /// test
 
@@ -163,7 +169,7 @@ const home = {
   ],
 };
 
-m.route(document.body, "/", {
+export default m.route(null, "/", {
   "/": home,
   "/about": {
     view: () => [
